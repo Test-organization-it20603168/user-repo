@@ -53,11 +53,11 @@ jobs:
 
     - name: Build Docker image
       run: |
-        docker build -t chathurikathathsarani/user-service:v1.0.0.0 .
+        docker build -t chathurikathathsarani/user-service1:v1.0.0.0 .
 
     - name: Scan Docker image for vulnerabilities
       run: |
-        docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v $(pwd):/root/ aquasec/trivy image chathurikathathsarani/user-service:v1.0.0.0 > trivy_report.json || true
+        docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v $(pwd):/root/ aquasec/trivy image chathurikathathsarani/user-service1:v1.0.0.0 > trivy_report.json || true
 
     - name: Upload Trivy report
       if: always()
@@ -67,4 +67,4 @@ jobs:
         path: trivy_report.json
     - name: Push Docker image to Docker Hub
       run: |
-        docker push chathurikathathsarani/user-service:v1.0.0.0
+        docker push chathurikathathsarani/user-service1:v1.0.0.0
