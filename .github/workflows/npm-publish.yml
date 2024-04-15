@@ -1,0 +1,70 @@
+name: Node.js CI/CD
+
+on:
+  push:
+    branches: 
+      - main
+      - release/*
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  BuildandTest:
+    runs-on: ubuntu-latest
+    name: Build and Test
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+    - name: Install dependencies
+      run: npm install
+    - name: Build
+      run: npm run build --if-present
+    - name: Depcheck
+      uses: dependency-check/Dependency-Check_Action@main
+      id: Depcheck
+      with:
+        project: 'test'
+        path: '.' # Update this path if necessary
+        format: 'HTML'
+        out: 'reports'
+        args: >
+          --failOnCVSS 7
+          --enableRetired
+    - name: Upload Test results
+      uses: actions/upload-artifact@v2
+      with:
+        name: depcheck-report
+        path: ${{ github.workspace }}/reports
+    - name: Test
+      run: npm test
+
+  Containerization:
+    needs: BuildandTest
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Login to Docker Hub
+      uses: docker/login-action@v1
+      with:
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_TOKEN  }} # Using Docker password secret
+
+    - name: Build Docker image
+      run: |
+        docker build -t chathurikathathsarani/user-service:v1.0.0.0 .
+
+    - name: Scan Docker image for vulnerabilities
+      run: |
+        docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v $(pwd):/root/ aquasec/trivy image chathurikathathsarani/user-service:v1.0.0.0 > trivy_report.json || true
+
+    - name: Upload Trivy report
+      if: always()
+      uses: actions/upload-artifact@v2
+      with:
+        name: trivy-report
+        path: trivy_report.json
+    - name: Push Docker image to Docker Hub
+      run: |
+        docker push chathurikathathsarani/user-service:v1.0.0.0
